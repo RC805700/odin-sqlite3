@@ -8,9 +8,9 @@ Statement :: rawptr
 Blob :: rawptr
 
 @(private)
-USE_DYNAMIC_LIB :: #config(SQLITE3_DYNAMIC_LIB, false)
+USE_DYNAMIC_LIB :: #config(SQLITE3_DYNAMIC_LIB, true)
 @(private)
-USE_SYSTEM_LIB :: #config(SQLITE3_SYSTEM_LIB, false)
+USE_SYSTEM_LIB :: #config(SQLITE3_SYSTEM_LIB, true)
 @(private)
 USE_SQLCIPHER :: #config(SQLITE3_USE_SQLCIPHER, false)
 
@@ -139,13 +139,36 @@ Config_Option :: enum (c.int) {
 }
 
 Destructor_Behavior :: enum (int) {
-	Static    = 0, 
+	Static    = 0,
 	Transient = -1,
 }
 
 Destructor :: struct #raw_union {
 	callback:  proc(it: rawptr),
 	behaviour: Destructor_Behavior,
+}
+
+Open_Flags :: enum {
+	Read_Only = 0,
+	Read_Write,
+	Create,
+	Delete_On_Close,
+	Exclusive,
+	Autoproxy,
+	URI,
+	Memory,
+	Main_DB,
+	Temp_DB,
+	Transient_DB,
+	Main_Journal,
+	Temp_Journal,
+	Subjournal,
+	Super_Journal,
+	No_Mutex,
+	Full_Mutex,
+	Shared_Cache,
+	Private_Cache,
+	WAL,
 }
 
 Result_Code :: enum (c.int) {
@@ -261,7 +284,7 @@ foreign sqlite {
 	free :: proc "c" (ptr: rawptr) ---
 	open :: proc "c" (filename: cstring, db: ^^Connection) -> Result_Code ---
 	open16 :: proc "c" (filename: cstring, db: ^^Connection) -> Result_Code ---
-	open_v2 :: proc "c" (filename: cstring, db: ^^Connection, flags: c.int, z_vfs: cstring) -> Result_Code ---
+	open_v2 :: proc "c" (filename: cstring, db: ^^Connection, flags: bit_set[Open_Flags] = {}, z_vfs: cstring = nil) -> Result_Code ---
 	close :: proc "c" (db: ^Connection) -> Result_Code ---
 	close_v2 :: proc "c" (db: ^Connection) -> Result_Code ---
 	prepare :: proc "c" (db: ^Connection, sql: cstring, n_bytes: c.int, statement: ^^Statement, tail: ^^cstring) -> Result_Code ---
@@ -342,6 +365,13 @@ foreign sqlite {
 	sql :: proc "c" (statement: ^Statement) -> cstring ---
 	expanded_sql :: proc "c" (statement: ^Statement) -> cstring ---
 	threadsafe :: proc "c" () -> c.int ---
+
+	@(require_results)
+	errcode :: proc "c" (db: ^Connection) -> Result_Code ---
+	@(require_results)
+	errmsg16 :: proc "c" (db: ^Connection) -> cstring ---
+	errstr :: proc "c" (code: Result_Code) -> cstring ---
+
 
 	// Export SQLCipher-specific functions conditionally.
 	when USE_SQLCIPHER {
