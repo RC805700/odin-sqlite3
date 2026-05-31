@@ -17,7 +17,6 @@ Regex_Error :: union #shared_nil {
 
 @(private)
 match_and_return_capture :: proc(pattern: string, str: string) -> (string, Regex_Error) {
-	defer free_all(context.temp_allocator)
 	regexp, err := regex.create(pattern, permanent_allocator = context.temp_allocator)
 	if err != nil {
 		return "", err
