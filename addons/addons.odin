@@ -40,17 +40,22 @@ query :: proc(
 	out: ^[dynamic]$T,
 	sql: string,
 	params: []Query_Param = {},
+	allocator := context.allocator,
 	location := #caller_location,
 ) -> sqlite3.Result_Code {
 	stmt: ^sqlite3.Statement
 
 	prepare(db, &stmt, sql, params, location) or_return
-	return read_all_rows(stmt, out)
+	return read_all_rows(stmt, out, allocator)
 }
 
 // Allocates. Make sure to free results even when the return value is not .Ok
 @(require_results)
-read_all_rows :: proc(stmt: ^sqlite3.Statement, out: ^[dynamic]$T) -> sqlite3.Result_Code {
+read_all_rows :: proc(
+	stmt: ^sqlite3.Statement,
+	out: ^[dynamic]$T,
+	allocator := context.allocator,
+) -> sqlite3.Result_Code {
 	fields, err := get_type_fields(T)
 	if err != nil {
 		log.error(err)
@@ -79,8 +84,13 @@ read_all_rows :: proc(stmt: ^sqlite3.Statement, out: ^[dynamic]$T) -> sqlite3.Re
 				return .Internal
 			}
 
-			if err := write_struct_field_from_statement(&item, field_type, stmt, c.int(i));
-			   err != nil {
+			if err := write_struct_field_from_statement(
+				&item,
+				field_type,
+				stmt,
+				c.int(i),
+				allocator,
+			); err != nil {
 				log.error(err)
 				free_query_error(err)
 				return .Internal
@@ -198,10 +208,11 @@ write_struct_field_from_statement :: proc(
 	field: ^Field_Type,
 	stmt: ^sqlite3.Statement,
 	col_idx: c.int,
+	allocator := context.allocator,
 ) -> Query_Error {
 	switch field.type.id {
 	case typeid_of(string):
-		value := strings.clone_from(sqlite3.column_text(stmt, col_idx))
+		value := strings.clone_from(sqlite3.column_text(stmt, col_idx), allocator)
 		write_struct_field(obj, field^, value) or_return
 
 	case typeid_of(bool):
