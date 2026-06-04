@@ -5,12 +5,9 @@ import "base:runtime"
 import "core:c"
 import "core:fmt"
 import "core:log"
-import "core:mem"
 import "core:reflect"
 import "core:slice"
-import "core:strconv"
 import "core:strings"
-import "core:text/regex"
 
 Runtime_Config :: struct {
 	extra_runtime_checks: bool,
